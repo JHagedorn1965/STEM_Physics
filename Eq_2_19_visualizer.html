@@ -185,6 +185,10 @@
     color: var(--muted);
     margin-bottom: 4px;
   }
+  .readout .label span {
+    text-transform: none;
+    font-size: 13px;
+  }
   .readout .val {
     font-family: "SF Mono", Menlo, Consolas, monospace;
     font-size: 18px;
@@ -264,7 +268,7 @@
         <span class="var var-a">a</span>
         <span class="var var-t">t</span><span class="sup">2</span>
       </div>
-      <div class="equation-name">Displacement with initial velocity and constant acceleration</div>
+      <div class="equation-name">Displacement with initial velocity<br>and constant acceleration</div>
     </div>
 
     <h2>Variables</h2>
@@ -323,7 +327,7 @@
   <section class="panel right">
     <div class="graph-box">
       <div class="graph-title">
-        <span style="color: var(--c-dx);">Position Δx<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m )</span></span>
+        <span style="color: var(--c-dx);">Position <span style="text-transform:none">Δx(t)</span>  <span style="text-transform:none">( m )</span></span>
         <span class="cur" id="posCur" style="color: var(--c-dx);">Δx = 0.00 m</span>
       </div>
       <canvas id="graphPos"></canvas>
@@ -331,7 +335,7 @@
 
     <div class="graph-box">
       <div class="graph-title">
-        <span style="color: var(--c-v0);">Velocity v<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m/s )</span></span>
+        <span style="color: var(--c-v0);">Velocity <span style="text-transform:none">v(t)</span>  <span style="text-transform:none">( m/s )</span></span>
         <span class="cur" id="velCur" style="color: var(--c-v0);">v = 5.00 m/s</span>
       </div>
       <canvas id="graphVel"></canvas>
@@ -339,7 +343,7 @@
 
     <div class="graph-box">
       <div class="graph-title">
-        <span style="color: var(--c-a);">Acceleration a<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m/s² )</span></span>
+        <span style="color: var(--c-a);">Acceleration <span style="text-transform:none">a(t)</span>  <span style="text-transform:none">( m/s² )</span></span>
         <span class="cur" id="accCur" style="color: var(--c-a);">a = 2.00 m/s²</span>
       </div>
       <canvas id="graphAcc"></canvas>
