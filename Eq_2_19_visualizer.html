@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eq_2_19 Visualizer — Kinematic Equation</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --panel: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --border: #e5e7eb;
+
+    --c-v0: #2563eb;   /* blue   — velocity        */
+    --c-a:  #dc2626;   /* red    — acceleration    */
+    --c-t:  #059669;   /* green  — time            */
+    --c-dx: #7c3aed;   /* purple — displacement    */
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+
+  header {
+    padding: 14px 24px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  header .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(340px, 36%) 1fr;
+    gap: 16px;
+    padding: 16px;
+    height: calc(100vh - 55px);
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    overflow: auto;
+  }
+
+  .left h2, .right h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin: 0 0 10px 0;
+    font-weight: 600;
+  }
+
+  /* ---------- Equation ---------- */
+  .equation-wrap {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 16px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .equation {
+    font-family: "Cambria Math", "Latin Modern Math", Georgia, serif;
+    font-size: 28px;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .equation .frac {
+    display: inline-flex;
+    flex-direction: column;
+    vertical-align: middle;
+    font-size: 18px;
+    line-height: 1;
+    margin: 0 2px;
+    font-style: normal;
+  }
+  .equation .frac span:first-child { border-bottom: 1px solid currentColor; padding: 0 4px; }
+  .equation .frac span:last-child  { padding: 2px 4px 0 4px; }
+
+  .var { font-weight: 700; }
+  .var-v0 { color: var(--c-v0); }
+  .var-a  { color: var(--c-a);  }
+  .var-t  { color: var(--c-t);  }
+  .var-dx { color: var(--c-dx); }
+
+  .sub { font-size: 0.7em; vertical-align: sub; font-style: normal; }
+  .sup { font-size: 0.7em; vertical-align: super; font-style: normal; }
+
+  .equation-name {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    letter-spacing: 0.4px;
+  }
+
+  /* ---------- Controls ---------- */
+  .control {
+    margin-bottom: 18px;
+  }
+  .control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .control-header label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .control-header .value {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
+  .buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 20px;
+  }
+  button {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:hover { background: #f3f4f6; }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: #1d4ed8; }
+
+  /* ---------- Readouts ---------- */
+  .readouts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .readout {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .readout .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .readout .val {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  /* ---------- Right side ---------- */
+  .right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .graph-box {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px 4px 12px;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .graph-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 2px;
+  }
+  .graph-title .cur {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  canvas {
+    width: 100%;
+    flex: 1 1 0;    /* basis 0: flex controls height, not the pixel-buffer size */
+    min-height: 0;
+    display: block;
+    border-radius: 6px;
+  }
+
+  footer {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Newton's Laws Visualizer</h1>
+  <div class="subtitle">Kinematic equation of motion under constant acceleration</div>
+</header>
+
+<div class="app">
+
+  <!-- ====================== LEFT PANEL ====================== -->
+  <section class="panel left">
+    <h2>Equation</h2>
+    <div class="equation-wrap">
+      <div class="equation">
+        <span class="var var-dx">Δx</span> =
+        <span class="var var-v0">v<span class="sub">0</span></span>
+        <span class="var var-t">t</span>
+        +
+        <span class="frac"><span>1</span><span>2</span></span>
+        <span class="var var-a">a</span>
+        <span class="var var-t">t</span><span class="sup">2</span>
+      </div>
+      <div class="equation-name">Displacement with initial velocity and constant acceleration</div>
+    </div>
+
+    <h2>Variables</h2>
+
+    <div class="control">
+      <div class="control-header">
+        <label for="v0">Initial velocity <span class="var-v0">v₀</span></label>
+        <span class="value"><span id="v0Val">5.0</span> m/s</span>
+      </div>
+      <input type="range" id="v0" min="-20" max="20" step="0.5" value="5" />
+    </div>
+
+    <div class="control">
+      <div class="control-header">
+        <label for="tmax">Max time <span class="var-t">t</span></label>
+        <span class="value"><span id="tmaxVal">6.0</span> s</span>
+      </div>
+      <input type="range" id="tmax" min="2" max="15" step="0.5" value="6" />
+    </div>
+
+    <div class="control">
+      <div class="control-header">
+        <label for="a">Acceleration <span class="var-a">a</span></label>
+        <span class="value"><span id="aVal">-9.8</span> m/s²</span>
+      </div>
+      <input type="range" id="a" min="-10" max="10" step="0.1" value="-9.8" />
+    </div>
+
+    <div class="buttons">
+      <button id="playBtn" class="primary">▶ Play</button>
+      <button id="resetBtn">↺ Reset</button>
+    </div>
+
+    <h2>Live Readout</h2>
+    <div class="readouts">
+      <div class="readout">
+        <div class="label"><span class="var-v0">v</span> — velocity</div>
+        <div class="val" id="vOut">5.00 m/s</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-t">t</span> — time</div>
+        <div class="val" id="tOut">0.00 s</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-a">a</span> — acceleration</div>
+        <div class="val" id="aOut">-9.80 m/s²</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-dx">Δx</span> — displacement</div>
+        <div class="val" id="xOut">0.00 m</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== RIGHT PANEL ====================== -->
+  <section class="panel right">
+    <div class="graph-box">
+      <div class="graph-title">
+        <span style="color: var(--c-dx);">Position Δx<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m )</span></span>
+        <span class="cur" id="posCur" style="color: var(--c-dx);">Δx = 0.00 m</span>
+      </div>
+      <canvas id="graphPos"></canvas>
+    </div>
+
+    <div class="graph-box">
+      <div class="graph-title">
+        <span style="color: var(--c-v0);">Velocity v<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m/s )</span></span>
+        <span class="cur" id="velCur" style="color: var(--c-v0);">v = 5.00 m/s</span>
+      </div>
+      <canvas id="graphVel"></canvas>
+    </div>
+
+    <div class="graph-box">
+      <div class="graph-title">
+        <span style="color: var(--c-a);">Acceleration a<span style="text-transform:none">(t)</span>  <span style="text-transform:none">( m/s² )</span></span>
+        <span class="cur" id="accCur" style="color: var(--c-a);">a = 2.00 m/s²</span>
+      </div>
+      <canvas id="graphAcc"></canvas>
+    </div>
+  </section>
+</div>
+
+<footer>Built for classroom use — adjust v₀, a, and max time, then press Play.</footer>
+
+<script>
+(() => {
+  // ---------- DOM ----------
+  const v0Slider   = document.getElementById('v0');
+  const aSlider    = document.getElementById('a');
+  const tmaxSlider = document.getElementById('tmax');
+
+  const v0ValEl   = document.getElementById('v0Val');
+  const aValEl    = document.getElementById('aVal');
+  const tmaxValEl = document.getElementById('tmaxVal');
+
+  const tOut = document.getElementById('tOut');
+  const xOut = document.getElementById('xOut');
+  const vOut = document.getElementById('vOut');
+  const aOut = document.getElementById('aOut');
+
+  const posCur = document.getElementById('posCur');
+  const velCur = document.getElementById('velCur');
+  const accCur = document.getElementById('accCur');
+
+  const playBtn  = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const posCanvas = document.getElementById('graphPos');
+  const velCanvas = document.getElementById('graphVel');
+  const accCanvas = document.getElementById('graphAcc');
+
+  // ---------- State ----------
+  let v0 = parseFloat(v0Slider.value);
+  let a  = parseFloat(aSlider.value);
+  let tmax = parseFloat(tmaxSlider.value);
+  let t = 0;
+  let playing = false;
+  let lastTs = null;
+
+  // ---------- Canvas sizing (HiDPI) ----------
+  function fitCanvas(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    canvas.width  = Math.round(rect.width  * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function fitAll() {
+    fitCanvas(posCanvas);
+    fitCanvas(velCanvas);
+    fitCanvas(accCanvas);
+    drawAll();
+  }
+  window.addEventListener('resize', fitAll);
+
+  // ---------- Physics ----------
+  function position(time)     { return v0 * time + 0.5 * a * time * time; }
+  function velocity(time)     { return v0 + a * time; }
+  function acceleration(time) { return a; }
+
+  // Position shifted so the endpoint (t = tmax) is always at y = 0.
+  // This frames the graph as "height above landing" — the ball starts at
+  // some positive height and lands at zero at the end of the time window.
+  function positionShifted(time) { return position(time) - position(tmax); }
+
+  // Range helper for a function across [0, tmax], including critical points.
+  function rangeOf(fn) {
+    const vals = [0, tmax].map(fn);
+    // For position-like functions, include the apex/nadir at t = -v0/a
+    if ((fn === position || fn === positionShifted) && a !== 0) {
+      const tStar = -v0 / a;
+      if (tStar > 0 && tStar < tmax) vals.push(fn(tStar));
+    }
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+  }
+
+  // ---------- Generalized graph drawer ----------
+  // fixedRange (optional): { min, max } forces the y-axis to span that range.
+  function drawGraph(canvas, fn, color, unitLabel, fixedRange) {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    // Derive logical size from the pixel buffer — always matches the transform
+    // set in fitCanvas, regardless of what CSS reports.
+    const w = canvas.width  / dpr;
+    const h = canvas.height / dpr;
+    if (w === 0 || h === 0) return;
+    ctx.clearRect(0, 0, w, h);
+
+    const padL = 52, padR = 14, padT = fixedRange ? 14 : 8, padB = 28;
+    const plotW = Math.max(20, w - padL - padR);
+    const plotH = Math.max(20, h - padT - padB);
+
+    let yMin, yMax;
+    if (fixedRange) {
+      yMin = fixedRange.min;
+      yMax = fixedRange.max;
+    } else {
+      let { min, max } = rangeOf(fn);
+      // Ensure zero line visible and avoid flat graphs collapsing to a line.
+      if (min === max) { min -= 1; max += 1; }
+      if (min > 0) min = 0;
+      if (max < 0) max = 0;
+      const pad = (max - min) * 0.08;
+      yMin = min - pad;
+      yMax = max + pad;
+    }
+    const yRange = yMax - yMin;
+
+    function tx(timeVal) { return padL + (timeVal / tmax) * plotW; }
+    function ty(val)     { return padT + plotH - ((val - yMin) / yRange) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#eef0f3';
+    ctx.lineWidth = 1;
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.fillStyle = '#6b7280';
+
+    // X grid / ticks
+    const tTicks = 6;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i <= tTicks; i++) {
+      const tv = (tmax * i) / tTicks;
+      const x = tx(tv);
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + plotH);
+      ctx.stroke();
+      ctx.fillText(tv.toFixed(1), x, padT + plotH + 4);
+    }
+
+    // Y grid / ticks
+    const yTicks = 4;
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= yTicks; i++) {
+      const yv = yMin + (yRange * i) / yTicks;
+      const y = ty(yv);
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + plotW, y);
+      ctx.stroke();
+      // Anchor extreme labels inside the plot so they're never clipped:
+      // bottom tick → text sits above the line; top tick → text sits below.
+      ctx.textBaseline = (i === 0) ? 'bottom' : (i === yTicks) ? 'top' : 'middle';
+      ctx.fillText(yv.toFixed(1), padL - 4, y);
+    }
+
+    // Axes
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW, padT + plotH);
+    ctx.stroke();
+
+    // Zero line (if 0 is inside the y range but not on the bottom axis)
+    if (yMin < 0 && yMax > 0) {
+      const yZero = ty(0);
+      ctx.strokeStyle = '#9ca3af';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(padL, yZero);
+      ctx.lineTo(padL + plotW, yZero);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#374151';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('t (s)', padL + plotW / 2, h - 4);
+
+    ctx.save();
+    ctx.translate(14, padT + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(unitLabel, 0, 0);
+    ctx.restore();
+
+    // --- Faint full path ---
+    const steps = 200;
+    const tNow = Math.min(t, tmax);
+    const hexToRGBA = (hex, alpha) => {
+      const n = parseInt(hex.slice(1), 16);
+      return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+    };
+
+    ctx.strokeStyle = hexToRGBA(color, 0.35);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const tv = (tmax * i) / steps;
+      const px = tx(tv), py = ty(fn(tv));
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // --- Traced curve up to current t ---
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const stepsNow = Math.max(2, Math.round(steps * (tNow / tmax)));
+    for (let i = 0; i <= stepsNow; i++) {
+      const tv = (tNow * i) / stepsNow;
+      const px = tx(tv), py = ty(fn(tv));
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Dot at current point
+    const curPx = tx(tNow);
+    const curPy = ty(fn(tNow));
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(curPx, curPy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Vertical time marker
+    ctx.strokeStyle = 'rgba(31, 41, 55, 0.30)';
+    ctx.setLineDash([2, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(curPx, padT);
+    ctx.lineTo(curPx, padT + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ---------- Update everything ----------
+  function updateReadouts() {
+    tOut.textContent = t.toFixed(2) + ' s';
+    xOut.textContent = positionShifted(t).toFixed(2) + ' m';
+    vOut.textContent = velocity(t).toFixed(2) + ' m/s';
+    aOut.textContent = a.toFixed(2) + ' m/s²';
+
+    posCur.textContent = 'Δx = ' + positionShifted(t).toFixed(2) + ' m';
+    velCur.textContent = 'v = '  + velocity(t).toFixed(2) + ' m/s';
+    accCur.textContent = 'a = '  + acceleration(t).toFixed(2) + ' m/s²';
+  }
+
+  function drawAll() {
+    drawGraph(posCanvas, positionShifted, '#7c3aed', 'Δx (m)');
+    drawGraph(velCanvas, velocity,        '#2563eb', 'v (m/s)');
+    drawGraph(accCanvas, acceleration, '#dc2626', 'a (m/s²)', { min: -10, max: 10 });
+    updateReadouts();
+  }
+
+  // ---------- Animation loop ----------
+  function loop(ts) {
+    if (!playing) return;
+    if (lastTs == null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    t += dt;
+    if (t >= tmax) {
+      t = tmax;
+      playing = false;
+      playBtn.textContent = '▶ Play';
+    }
+    drawAll();
+    if (playing) requestAnimationFrame(loop);
+  }
+
+  // ---------- Event handlers ----------
+  function onSliderChange() {
+    v0   = parseFloat(v0Slider.value);
+    a    = parseFloat(aSlider.value);
+    tmax = parseFloat(tmaxSlider.value);
+    v0ValEl.textContent   = v0.toFixed(1);
+    aValEl.textContent    = a.toFixed(1);
+    tmaxValEl.textContent = tmax.toFixed(1);
+    if (t > tmax) t = tmax;
+    drawAll();
+  }
+  v0Slider.addEventListener('input', onSliderChange);
+  aSlider.addEventListener('input',  onSliderChange);
+  tmaxSlider.addEventListener('input', onSliderChange);
+
+  playBtn.addEventListener('click', () => {
+    if (playing) {
+      playing = false;
+      playBtn.textContent = '▶ Play';
+      return;
+    }
+    if (t >= tmax) t = 0;
+    playing = true;
+    lastTs = null;
+    playBtn.textContent = '❚❚ Pause';
+    requestAnimationFrame(loop);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    playing = false;
+    t = 0;
+    lastTs = null;
+    playBtn.textContent = '▶ Play';
+    drawAll();
+  });
+
+  // ---------- Init ----------
+  // Double-RAF ensures the flex layout has fully settled before we measure
+  // and pin canvas sizes.  A direct fitAll() call at parse time can see
+  // rect.height === 0 and leave canvases invisible.
+  requestAnimationFrame(() => requestAnimationFrame(fitAll));
+})();
+</script>
+</body>
+</html>
