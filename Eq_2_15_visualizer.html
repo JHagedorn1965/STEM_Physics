@@ -301,7 +301,7 @@
   <section class="panel right">
     <div class="graph-box">
       <div class="graph-title">
-        <span style="color: var(--c-v0);">Velocity <span style="text-transform:none">v(Δx)</span>  <span style="text-transform:none">( m/s )</span></span>
+        <span style="color: var(--c-v0);"><span style="text-transform:none">v(Δx)</span>, VELOCITY, <span style="text-transform:none">m/s</span></span>
         <span class="cur" id="velCur" style="color: var(--c-v0);">v = 20.00 m/s</span>
       </div>
       <canvas id="graphVel"></canvas>
@@ -309,7 +309,15 @@
 
     <div class="graph-box">
       <div class="graph-title">
-        <span style="color: var(--c-a);">Acceleration <span style="text-transform:none">a(Δx)</span>  <span style="text-transform:none">( m/s² )</span></span>
+        <span style="color: var(--c-v0);"><span style="text-transform:none">v²(Δx)</span>, VELOCITY SQUARED, <span style="text-transform:none">m²/s²</span></span>
+        <span class="cur" id="v2Cur" style="color: var(--c-v0);">v² = 400.00 m²/s²</span>
+      </div>
+      <canvas id="graphV2"></canvas>
+    </div>
+
+    <div class="graph-box">
+      <div class="graph-title">
+        <span style="color: var(--c-a);"><span style="text-transform:none">a(Δx)</span>, ACCELERATION, <span style="text-transform:none">m/s²</span></span>
         <span class="cur" id="accCur" style="color: var(--c-a);">a = -9.80 m/s²</span>
       </div>
       <canvas id="graphAcc"></canvas>
@@ -335,12 +343,14 @@
   const aOut  = document.getElementById('aOut');
   const v0Out = document.getElementById('v0Out');
 
+  const v2Cur  = document.getElementById('v2Cur');
   const velCur = document.getElementById('velCur');
   const accCur = document.getElementById('accCur');
 
   const playBtn  = document.getElementById('playBtn');
   const resetBtn = document.getElementById('resetBtn');
 
+  const v2Canvas  = document.getElementById('graphV2');
   const velCanvas = document.getElementById('graphVel');
   const accCanvas = document.getElementById('graphAcc');
 
@@ -364,6 +374,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function fitAll() {
+    fitCanvas(v2Canvas);
     fitCanvas(velCanvas);
     fitCanvas(accCanvas);
     drawAll();
@@ -372,11 +383,23 @@
 
   // ---------- Physics ----------
   // v² = v₀² + 2a·Δx  →  v = sign(v₀)·√(v₀² + 2a·Δx)
+  // When v₀ = 0 and a < 0, motion is in the −x direction so we negate
+  // the displacement in the calculation; velocity is shown as negative.
   // Returns null when the discriminant is negative (motion has stopped).
   function velocity(dxVal) {
-    const disc = v0 * v0 + 2 * a * dxVal;
+    const dxEff = (v0 === 0 && a < 0) ? -dxVal : dxVal;
+    const disc  = v0 * v0 + 2 * a * dxEff;
     if (disc < 0) return null;
-    return (v0 >= 0 ? 1 : -1) * Math.sqrt(disc);
+    const speed = Math.sqrt(disc);
+    if (v0 === 0) return a >= 0 ? speed : -speed;
+    return (v0 > 0 ? 1 : -1) * speed;
+  }
+
+  // v² = v₀² + 2a·Δx  — direct linear function of displacement
+  function velocitySquared(dxVal) {
+    const dxEff = (v0 === 0 && a < 0) ? -dxVal : dxVal;
+    const val = v0 * v0 + 2 * a * dxEff;
+    return val < 0 ? null : val;
   }
 
   function acceleration() { return a; }
@@ -423,6 +446,19 @@
     if (fixedRange) {
       yMin = fixedRange.min;
       yMax = fixedRange.max;
+    } else if (fn === 'v2') {
+      const vMax = validDxMax();
+      const vals = [v0 * v0];
+      const v2At0   = velocitySquared(0);
+      const v2AtMax = velocitySquared(vMax);
+      if (v2At0   !== null) vals.push(v2At0);
+      if (v2AtMax !== null) vals.push(v2AtMax);
+      vals.push(0);
+      let min = Math.min(...vals), max = Math.max(...vals);
+      if (min === max) { min -= 1; max += 1; }
+      const pad = (max - min) * 0.08;
+      yMin = Math.min(0, min - pad);
+      yMax = max + pad;
     } else {
       let { min, max } = rangeOfVelocity();
       if (min === max) { min -= 1; max += 1; }
@@ -434,7 +470,11 @@
     }
     const yRange = yMax - yMin;
 
-    function tx(dxVal) { return padL + (dxVal / dxmax) * plotW; }
+    // X-axis always spans [0, dxmax] as set by the slider.
+    // The curve stops where physics allows (validDxMax), but the axis runs the full range.
+    const xAxisMax = dxmax;
+
+    function tx(dxVal) { return padL + (dxVal / xAxisMax) * plotW; }
     function ty(val)   { return padT + plotH - ((val - yMin) / yRange) * plotH; }
 
     // Grid
@@ -448,7 +488,7 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (let i = 0; i <= xTicks; i++) {
-      const dxv = (dxmax * i) / xTicks;
+      const dxv = (xAxisMax * i) / xTicks;
       const x   = tx(dxv);
       ctx.beginPath();
       ctx.moveTo(x, padT);
@@ -507,20 +547,6 @@
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
 
-    // Valid range marker — dashed vertical line where motion stops (if before dxmax)
-    const vdx = validDxMax();
-    if (vdx < dxmax) {
-      const xStop = tx(vdx);
-      ctx.strokeStyle = 'rgba(156,163,175,0.6)';
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(xStop, padT);
-      ctx.lineTo(xStop, padT + plotH);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
     // --- Faint full path ---
     const steps = 300;
     const hexToRGBA = (hex, alpha) => {
@@ -533,8 +559,8 @@
     ctx.beginPath();
     let started = false;
     for (let i = 0; i <= steps; i++) {
-      const dxv = (dxmax * i) / steps;
-      const yVal = fn === 'acc' ? a : velocity(dxv);
+      const dxv = (xAxisMax * i) / steps;
+      const yVal = fn === 'acc' ? a : fn === 'v2' ? velocitySquared(dxv) : velocity(dxv);
       if (yVal === null) { started = false; continue; }
       const px = tx(dxv), py = ty(yVal);
       if (!started) { ctx.moveTo(px, py); started = true; }
@@ -543,15 +569,18 @@
     ctx.stroke();
 
     // --- Traced curve up to current dx ---
-    const dxNow = Math.min(dx, validDxMax());
-    const stepsNow = Math.max(2, Math.round(steps * (dxNow / dxmax)));
+    // For velocity and v² graphs, cap at validDxMax() so the dot stays
+    // visible at v=0 rather than disappearing when physics stops.
+    const dxCap = (fn === 'acc') ? xAxisMax : Math.min(xAxisMax, validDxMax());
+    const dxNow = Math.min(dx, dxCap);
+    const stepsNow = Math.max(2, Math.round(steps * (dxNow / xAxisMax)));
     ctx.strokeStyle = color;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     started = false;
     for (let i = 0; i <= stepsNow; i++) {
       const dxv  = (dxNow * i) / stepsNow;
-      const yVal = fn === 'acc' ? a : velocity(dxv);
+      const yVal = fn === 'acc' ? a : fn === 'v2' ? velocitySquared(dxv) : velocity(dxv);
       if (yVal === null) { started = false; continue; }
       const px = tx(dxv), py = ty(yVal);
       if (!started) { ctx.moveTo(px, py); started = true; }
@@ -560,7 +589,7 @@
     ctx.stroke();
 
     // Dot at current point
-    const curVal = fn === 'acc' ? a : velocity(dxNow);
+    const curVal = fn === 'acc' ? a : fn === 'v2' ? velocitySquared(dxNow) : velocity(dxNow);
     if (curVal !== null) {
       const curPx = tx(dxNow);
       const curPy = ty(curVal);
@@ -586,20 +615,25 @@
 
   // ---------- Update everything ----------
   function updateReadouts() {
-    const dxNow  = Math.min(dx, validDxMax());
-    const vNow   = velocity(dxNow);
+    // Δx readout tracks the full animation cursor up to dxmax.
+    // Velocity readout uses the physically valid position (capped at validDxMax).
+    const dxPhys = Math.min(dx, validDxMax());
+    const vNow   = velocity(dxPhys);
     const vStr   = vNow !== null ? vNow.toFixed(2) + ' m/s' : '— m/s';
     vOut.textContent  = vStr;
-    xOut.textContent  = dxNow.toFixed(2) + ' m';
+    xOut.textContent  = dx.toFixed(2) + ' m';
     aOut.textContent  = a.toFixed(2) + ' m/s²';
     v0Out.textContent = v0.toFixed(2) + ' m/s';
 
+    const v2Now = velocitySquared(dxPhys);
+    v2Cur.textContent  = 'v² = ' + (v2Now !== null ? v2Now.toFixed(2) : '—') + ' m²/s²';
     velCur.textContent = 'v = ' + (vNow !== null ? vNow.toFixed(2) : '—') + ' m/s';
     accCur.textContent = 'a = ' + a.toFixed(2) + ' m/s²';
   }
 
   function drawAll() {
     drawGraph(velCanvas, 'vel', '#2563eb', 'v (m/s)');
+    drawGraph(v2Canvas,  'v2',  '#7c3aed', 'v² (m²/s²)');
     drawGraph(accCanvas, 'acc', '#dc2626', 'a (m/s²)', { min: -15, max: 15 });
     updateReadouts();
   }
@@ -612,8 +646,8 @@
     lastTs = ts;
 
     dx += (dxmax / ANIM_DURATION) * dt;
-    if (dx >= validDxMax()) {
-      dx = validDxMax();
+    if (dx >= dxmax) {
+      dx = dxmax;
       playing = false;
       playBtn.textContent = '▶ Play';
     }
