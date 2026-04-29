@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eq_4_9 Visualizer — Projectile Range</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --panel: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --border: #e5e7eb;
+    --c-v0: #2563eb;
+    --c-th: #059669;
+    --c-r:  #7c3aed;
+    --c-a:  #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: var(--bg); }
+
+  header { padding: 14px 24px; background: #fff; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .subtitle { font-size: 13px; color: var(--muted); }
+
+  .app { display: grid; grid-template-columns: minmax(320px, 34%) 1fr;
+    gap: 16px; padding: 16px; height: calc(100vh - 55px); }
+
+  .panel { background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; overflow: auto; }
+
+  .left h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); margin: 0 0 10px 0; font-weight: 600; }
+
+  .equation-wrap { background: #f9fafb; border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 16px; text-align: center; margin-bottom: 20px; }
+  .equation { font-family: "Cambria Math", "Latin Modern Math", Georgia, serif;
+    font-size: 22px; line-height: 1.8; font-style: italic; }
+  .frac { display: inline-flex; flex-direction: column; align-items: center;
+    vertical-align: middle; font-size: 0.88em; }
+  .frac span:first-child { border-bottom: 1px solid #374151; padding: 0 3px; }
+  .frac span:last-child  { padding: 2px 3px 0; }
+  .var { font-weight: 700; text-decoration: none; }
+  .var-v0 { color: var(--c-v0); }
+  .var-th { color: var(--c-th); }
+  .var-r  { color: var(--c-r);  }
+  .sub { font-size: 0.68em; vertical-align: sub; font-style: normal; }
+  .sup { font-size: 0.68em; vertical-align: super; font-style: normal; }
+  .eq-label { font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: 0.3px; }
+  .eq-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .g-note { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+  .control { margin-bottom: 18px; }
+  .control-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .control-header label { font-size: 14px; font-weight: 600; }
+  .control-header .value { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 14px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+
+  .buttons { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 20px; }
+  button { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; color: var(--ink); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: background 0.15s; }
+  button:hover { background: #f3f4f6; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:hover { background: #1d4ed8; }
+
+  .readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .readout { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .readout .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--muted); margin-bottom: 4px; }
+  .readout .label span { text-transform: none; font-size: 13px; }
+  .readout .val { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 18px; font-weight: 600; }
+
+  /* Right panel: single large graph */
+  .right { display: flex; flex-direction: column; }
+  .graph-box { background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 14px 6px; flex: 1 1 0; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; }
+  .graph-title { display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.6px; margin-bottom: 4px; }
+  .graph-title .cur { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+    font-weight: 600; text-transform: none; letter-spacing: 0; }
+  canvas { width: 100%; flex: 1 1 0; min-height: 0; display: block; border-radius: 6px; }
+
+  footer { font-size: 11px; color: var(--muted); text-align: center; padding: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Newton's Laws Visualizer</h1>
+  <div class="subtitle">Projectile trajectory under constant gravitational acceleration</div>
+</header>
+
+<div class="app">
+  <section class="panel left">
+    <h2>Equation 4.9, page 118</h2>
+    <div class="equation-wrap">
+      <div class="equation">
+        <span class="var var-r">R</span> =
+        <span class="var var-v0">v<span class="sub">0</span></span><span class="sup">2</span>
+        sin(2<span class="var var-th">θ</span>) / g
+      </div>
+      <div class="eq-label">Range equation,<br>target and launcher at same altitude</div>
+    </div>
+
+    <h2>Variables</h2>
+    <p class="g-note">g = 9.8 m/s² (fixed)</p>
+
+    <div class="control">
+      <div class="control-header">
+        <label for="v0">Initial velocity <span class="var-v0" style="font-style:italic">v₀</span></label>
+        <span class="value"><span id="v0Val">200.0</span> m/s</span>
+      </div>
+      <input type="range" id="v0" min="200" max="500" step="1" value="200" />
+    </div>
+
+    <div class="control">
+      <div class="control-header">
+        <label for="theta">Launch angle <span class="var-th" style="font-style:italic">θ</span></label>
+        <span class="value"><span id="thetaVal">45.0</span>°</span>
+      </div>
+      <input type="range" id="theta" min="1" max="89" step="0.5" value="45" />
+    </div>
+
+    <div class="buttons">
+      <button id="playBtn" class="primary">▶ Play</button>
+      <button id="resetBtn">↺ Reset</button>
+    </div>
+
+    <h2>Live Readout</h2>
+    <div class="readouts">
+      <div class="readout">
+        <div class="label"><span class="var-v0">v</span> — speed</div>
+        <div class="val" id="vOut">20.00 m/s</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-th">θ</span> — angle</div>
+        <div class="val" id="thOut">45.0°</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-r">R</span> — range</div>
+        <div class="val" id="rOut">40.82 m</div>
+      </div>
+      <div class="readout">
+        <div class="label"><span class="var-th">H</span> — max height</div>
+        <div class="val" id="hOut">10.20 m</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <div class="graph-box">
+      <div class="graph-title">
+        <span style="color:var(--c-th);"><span style="text-transform:none">h(x)</span>, HEIGHT vs RANGE, <span style="text-transform:none">m</span></span>
+        <span class="cur" id="trajCur" style="color:var(--c-th);">h = 10.20 m</span>
+      </div>
+      <canvas id="graphTraj"></canvas>
+    </div>
+  </section>
+</div>
+
+<footer>Built for classroom use — adjust v₀ and θ, then press Play to animate the trajectory.</footer>
+
+<script>
+(() => {
+  const G = 9.8;
+  function niceMax(val) {
+    if (val <= 0) return 10;
+    const mag = Math.pow(10, Math.floor(Math.log10(val)));
+    return Math.ceil(val / mag) * mag;
+  }
+  const V0_MAX = 500;
+  const V0_MIN = 200;
+  const X_MAX  = niceMax(V0_MAX * V0_MAX / G);                          // fixed x-axis: max range at v₀=500, θ=45°
+  const Y_MAX  = 13000;                                                  // fixed y-axis max (m)
+
+  // --- DOM ---
+  const v0Slider    = document.getElementById('v0');
+  const thetaSlider = document.getElementById('theta');
+  const v0ValEl     = document.getElementById('v0Val');
+  const thetaValEl  = document.getElementById('thetaVal');
+  const vOut        = document.getElementById('vOut');
+  const thOut       = document.getElementById('thOut');
+  const rOut        = document.getElementById('rOut');
+  const hOut        = document.getElementById('hOut');
+  const trajCur     = document.getElementById('trajCur');
+  const playBtn     = document.getElementById('playBtn');
+  const resetBtn    = document.getElementById('resetBtn');
+  const canvas      = document.getElementById('graphTraj');
+
+  // --- State ---
+  let v0    = parseFloat(v0Slider.value);
+  let theta = parseFloat(thetaSlider.value); // degrees
+  let xNow  = 0;   // current horizontal position of dot
+  let playing = false;
+  let lastTs  = null;
+  const ANIM_DURATION = 4; // wall-clock seconds for full flight
+
+  // --- Physics ---
+  function toRad(deg) { return deg * Math.PI / 180; }
+
+  function totalRange() {
+    return (v0 * v0 * Math.sin(2 * toRad(theta))) / G;
+  }
+
+  function maxHeight() {
+    const sy = Math.sin(toRad(theta));
+    return (v0 * v0 * sy * sy) / (2 * G);
+  }
+
+  // Trajectory: height at horizontal position x
+  function height(x) {
+    const rad  = toRad(theta);
+    const tanT = Math.tan(rad);
+    const cosT = Math.cos(rad);
+    return x * tanT - (G * x * x) / (2 * v0 * v0 * cosT * cosT);
+  }
+
+  // Speed at horizontal position x
+  function speed(x) {
+    const rad = toRad(theta);
+    const vx  = v0 * Math.cos(rad);
+    const t   = x / vx;
+    const vy  = v0 * Math.sin(rad) - G * t;
+    return Math.sqrt(vx * vx + vy * vy);
+  }
+
+  // --- HiDPI canvas ---
+  function fitCanvas() {
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    canvas.width  = Math.round(rect.width  * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function fitAll() { fitCanvas(); drawAll(); }
+  window.addEventListener('resize', fitAll);
+
+  function hexRGBA(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+  }
+
+  // --- Draw trajectory graph ---
+  function draw() {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w   = canvas.width / dpr;
+    const h   = canvas.height / dpr;
+    if (w === 0 || h === 0) return;
+    ctx.clearRect(0, 0, w, h);
+
+    const padL = 56, padR = 20, padT = 16, padB = 32;
+    const plotW = Math.max(20, w - padL - padR);
+    const plotH = Math.max(20, h - padT - padB);
+
+    const R    = totalRange();
+    const Hmax = maxHeight();
+    const xMax = X_MAX;
+    const yMax = Y_MAX;
+
+    function tx(xv) { return padL + (xv / xMax) * plotW; }
+    function ty(yv) { return padT + plotH - (yv / yMax) * plotH; }
+
+    // --- Grid ---
+    ctx.strokeStyle = '#eef0f3'; ctx.lineWidth = 1;
+    ctx.font = '11px -apple-system, sans-serif'; ctx.fillStyle = '#6b7280';
+
+    const xTicks = 6;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let i = 0; i <= xTicks; i++) {
+      const xv = (xMax * i) / xTicks;
+      const x  = tx(xv);
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+      ctx.fillText(xv.toFixed(0), x, padT + plotH + 5);
+    }
+
+    const yTicks = 5;
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= yTicks; i++) {
+      const yv = (yMax * i) / yTicks;
+      const y  = ty(yv);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+      ctx.textBaseline = (i === 0) ? 'bottom' : (i === yTicks) ? 'top' : 'middle';
+      ctx.fillText(Math.round(yv).toString(), padL - 5, y);
+    }
+
+    // --- Axes ---
+    ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW, padT + plotH);
+    ctx.stroke();
+
+    // --- Axis labels ---
+    ctx.fillStyle = '#374151'; ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Range x (m)', padL + plotW / 2, h - 6);
+    ctx.save();
+    ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'middle'; ctx.fillText('Height h (m)', 0, 0);
+    ctx.restore();
+
+    // --- Impact point label (above x-axis, offset to the left of landing) ---
+    const rX = tx(R);
+    const labelX = rX - 8;  // nudge left of impact point
+    const labelY = padT + plotH - 10; // just above the x-axis
+    ctx.fillStyle = hexRGBA('#7c3aed', 0.85);
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('R = ' + R.toFixed(1) + ' m', labelX, labelY);
+
+    // Small dot at impact point on x-axis
+    ctx.fillStyle = hexRGBA('#7c3aed', 0.7);
+    ctx.beginPath(); ctx.arc(rX, padT + plotH, 4, 0, Math.PI * 2); ctx.fill();
+
+    const steps = 400;
+
+    // --- Faint full trajectory ---
+    ctx.strokeStyle = hexRGBA('#059669', 0.3);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const xv = (R * i) / steps;
+      const yv = Math.max(0, height(xv));
+      const px = tx(xv), py = ty(yv);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // --- Solid traced path up to xNow ---
+    const xCur     = Math.min(xNow, R);
+    const stepsNow = Math.max(2, Math.round(steps * xCur / R));
+    ctx.strokeStyle = '#059669'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i <= stepsNow; i++) {
+      const xv = (xCur * i) / stepsNow;
+      const yv = Math.max(0, height(xv));
+      const px = tx(xv), py = ty(yv);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // --- Dot at current position ---
+    const curH = Math.max(0, height(xCur));
+    const dotX = tx(xCur), dotY = ty(curH);
+    ctx.fillStyle = '#059669';
+    ctx.beginPath(); ctx.arc(dotX, dotY, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+    // --- Dashed drop lines to axes ---
+    ctx.strokeStyle = 'rgba(31,41,55,0.2)'; ctx.setLineDash([3,4]); ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(dotX, dotY); ctx.lineTo(dotX, padT + plotH); // vertical to x-axis
+    ctx.moveTo(dotX, dotY); ctx.lineTo(padL, dotY);          // horizontal to y-axis
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // --- Max height marker ---
+    const hMaxY = ty(Hmax);
+    ctx.strokeStyle = hexRGBA('#059669', 0.4); ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, hMaxY); ctx.lineTo(padL + plotW, hMaxY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = hexRGBA('#059669', 0.7);
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('H = ' + Hmax.toFixed(1) + ' m', padL + 4, hMaxY - 2);
+  }
+
+  // --- Readouts ---
+  function updateReadouts() {
+    const xCur = Math.min(xNow, totalRange());
+    const R    = totalRange();
+    const Hmax = maxHeight();
+    const s    = speed(xCur);
+    const hCur = Math.max(0, height(xCur));
+
+    vOut.textContent  = s.toFixed(2) + ' m/s';
+    thOut.textContent = theta.toFixed(1) + '°';
+    rOut.textContent  = R.toFixed(2) + ' m';
+    hOut.textContent  = Hmax.toFixed(2) + ' m';
+    trajCur.textContent = 'h = ' + hCur.toFixed(2) + ' m';
+  }
+
+  function drawAll() { draw(); updateReadouts(); }
+
+  // --- Animation loop ---
+  function loop(ts) {
+    if (!playing) return;
+    if (lastTs == null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    const R = totalRange();
+    xNow += (R / ANIM_DURATION) * dt;
+    if (xNow >= R) {
+      xNow = R;
+      playing = false;
+      playBtn.textContent = '▶ Play';
+    }
+    drawAll();
+    if (playing) requestAnimationFrame(loop);
+  }
+
+  // --- Sliders ---
+  function onSliderChange() {
+    v0    = parseFloat(v0Slider.value);
+    theta = parseFloat(thetaSlider.value);
+    v0ValEl.textContent    = v0.toFixed(1);
+    thetaValEl.textContent = theta.toFixed(1);
+    xNow = Math.min(xNow, totalRange());
+    drawAll();
+  }
+  v0Slider.addEventListener('input',    onSliderChange);
+  thetaSlider.addEventListener('input', onSliderChange);
+
+  playBtn.addEventListener('click', () => {
+    if (playing) { playing = false; playBtn.textContent = '▶ Play'; return; }
+    if (xNow >= totalRange()) xNow = 0;
+    playing = true; lastTs = null;
+    playBtn.textContent = '❚❚ Pause';
+    requestAnimationFrame(loop);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    playing = false; xNow = 0; lastTs = null;
+    playBtn.textContent = '▶ Play';
+    drawAll();
+  });
+
+  requestAnimationFrame(() => requestAnimationFrame(fitAll));
+})();
+</script>
+</body>
+</html>
